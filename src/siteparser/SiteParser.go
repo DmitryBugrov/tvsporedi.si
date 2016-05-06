@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -59,6 +60,30 @@ func Find(text []byte, template []byte, n int) int {
 		}
 	}
 	return -1
+}
+
+func FindWord(text []byte, template []byte, n int) int {
+	//m:=0
+	//len_text:=len(text)
+	//next:=true
+	for true {
+		pos := Find(text, template, n)
+		if pos == -1 {
+			return -1
+		}
+		nextSymbol := pos + len(template)
+		if nextSymbol < len(text) {
+			if (string(text[pos+len(template)]) != "\"") || (string(text[pos+len(template)]) != " ") {
+				n++
+			} else {
+				return pos
+			}
+		} else {
+			return -1
+		}
+	}
+	return -1
+
 }
 
 func FindTegBlock(text []byte, classname []byte) []byte {
@@ -132,7 +157,7 @@ func FindTegBlock(text []byte, classname []byte) []byte {
 						pos = pos + len(teg)
 
 					}
-					fmt.Println("find more 1000 teg=", string(teg))
+					//fmt.Println("find more 1000 teg=", string(teg))
 
 					return []byte("")
 				}
@@ -177,59 +202,65 @@ func FindTegBlockByParam(text []byte, param []byte, value []byte, end ...*int) [
 		//		fmt.Println(start_class_value,",",end_class_value,"=",string(text[start_class_value:end_class_value]),"|",string(value))
 
 		//search value from start to end points
-		if Find(text[start_param_value:end_param_value], value, 1) != -1 {
-			for i := start_param_value; i >= 0; i-- {
-				if (string(text[i]) == "<") && (string(text[i+1]) != "/") {
+		value_pos := Find(text[start_param_value:end_param_value], value, 1)
 
-					//search teg name
-					end_teg_pos := Find(text[i+1:], []byte(">"), 1)
-					end_teg_pos2 := Find(text[i+1:], []byte(" "), 1)
-					if end_teg_pos2 < end_teg_pos {
-						end_teg_pos = end_teg_pos2
-					}
-					if end_teg_pos == -1 {
-						return []byte("")
-					}
-					end_teg_pos = end_teg_pos + i + 1
-					teg := text[i+1 : end_teg_pos]
-					//					fmt.Println("teg=",string(teg))
-					close_teg := "/" + string(teg) + ">"
-					len_close_teg := len(close_teg)
-					//					fmt.Println("close teg=",close_teg)
-					//search close teg
-					open_teg := 1
-					pos := end_teg_pos
+		if value_pos != -1 { // && ((string(text[value_pos+1]) == " ") || (string(text[value_pos+1]) == "\"")) {
+			next_symbol := start_param_value + value_pos + len(value)
+			//	fmt.Println("Value:", string(value), "\t pos+1:", string(text[next_symbol]))
+			if (string(text[next_symbol]) == " ") || (string(text[next_symbol]) == "\"") {
+				for i := start_param_value; i >= 0; i-- {
+					if (string(text[i]) == "<") && (string(text[i+1]) != "/") {
 
-					for j := 1; j < 1000; j++ {
-
-						offset := Find(text[pos:], teg, 1)
-						if offset == -1 {
-							fmt.Println("Error in html page, teg=", string(teg), "do not have close teg")
+						//search teg name
+						end_teg_pos := Find(text[i+1:], []byte(">"), 1)
+						end_teg_pos2 := Find(text[i+1:], []byte(" "), 1)
+						if end_teg_pos2 < end_teg_pos {
+							end_teg_pos = end_teg_pos2
+						}
+						if end_teg_pos == -1 {
 							return []byte("")
 						}
-						pos = pos + offset
-						//fmt.Println()
-						if string(text[pos-1:pos-1+len_close_teg]) == close_teg {
-							open_teg--
-						} else {
-							if string(text[pos-1]) == "<" {
-								open_teg++
-							}
-						}
-						//						fmt.Println(open_teg)
-						if open_teg == 0 {
-							//fmt.Println("teg=",string(text[i:pos+len(teg)+1]))
-							if end != nil {
-								*end[0] = pos + len(teg) + 1
-							}
-							return text[i : pos+len(teg)+1]
-						}
-						pos = pos + len(teg)
+						end_teg_pos = end_teg_pos + i + 1
+						teg := text[i+1 : end_teg_pos]
+						//					fmt.Println("teg=",string(teg))
+						close_teg := "/" + string(teg) + ">"
+						len_close_teg := len(close_teg)
+						//					fmt.Println("close teg=",close_teg)
+						//search close teg
+						open_teg := 1
+						pos := end_teg_pos
 
+						for j := 1; j < 1000; j++ {
+
+							offset := Find(text[pos:], teg, 1)
+							if offset == -1 {
+								fmt.Println("Error in html page, teg=", string(teg), "do not have close teg")
+								return []byte("")
+							}
+							pos = pos + offset
+							//fmt.Println()
+							if string(text[pos-1:pos-1+len_close_teg]) == close_teg {
+								open_teg--
+							} else {
+								if string(text[pos-1]) == "<" {
+									open_teg++
+								}
+							}
+							//						fmt.Println(open_teg)
+							if open_teg == 0 {
+								//fmt.Println("teg=",string(text[i:pos+len(teg)+1]))
+								if end != nil {
+									*end[0] = pos + len(teg) + 1
+								}
+								return text[i : pos+len(teg)+1]
+							}
+							pos = pos + len(teg)
+
+						}
+						fmt.Println("find more 1000 teg=", string(teg))
+
+						return []byte("")
 					}
-					fmt.Println("find more 1000 teg=", string(teg))
-
-					return []byte("")
 				}
 			}
 		}
@@ -273,7 +304,7 @@ func ToDigital(text []byte) string {
 
 func CutBefore(text []byte, template []byte, n int) []byte {
 	m := 0
-	for i := 0; i < len(text); i++ {
+	for i := 0; i < len(text)-len(template); i++ {
 		isFound := false
 		for j := 0; j < len(template); j++ {
 			if text[i+j] != template[j] {
@@ -296,7 +327,7 @@ func CutBefore(text []byte, template []byte, n int) []byte {
 
 func CutAfter(text []byte, template []byte, n int) []byte {
 	m := 0
-	for i := 0; i < len(text); i++ {
+	for i := 0; i < len(text)-len(template); i++ {
 		isFound := false
 		for j := 0; j < len(template); j++ {
 			if text[i+j] != template[j] {
@@ -349,6 +380,8 @@ func (jar *Jar) Cookies(u *url.URL) []*http.Cookie {
 }
 
 func GetPage(Client *http.Client, url string, blacklist ...[]string) []byte {
+	re := regexp.MustCompile(" ")
+	url = re.ReplaceAllLiteralString(url, "%20")
 	if len(blacklist) > 0 {
 		for i := 0; i < len(blacklist[0]); i++ {
 			if url == blacklist[0][i] {

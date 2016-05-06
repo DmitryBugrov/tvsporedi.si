@@ -3,5 +3,5 @@ PWD=`pwd`
 export GOPATH=$PWD:$GOPATH
 echo $GOPATH
 
-go build ./src/spored.tv.go
+go build ./src/tvsporedi.si.go
 

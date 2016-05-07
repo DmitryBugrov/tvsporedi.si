@@ -1,4 +1,3 @@
-# tvsporedi.si
 
 ## parsing and web-scraping site http://www.tvsporedi.si/
 
